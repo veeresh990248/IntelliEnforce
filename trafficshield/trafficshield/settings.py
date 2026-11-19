@@ -8,25 +8,46 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security settings
+# --------------------------------------------------
+# SECURITY SETTINGS
+# --------------------------------------------------
+
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
-    "django-insecure-change-this-key-for-local-development"
+    "django-insecure-local-development-only-change-this"
 )
 
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [
-    "intellienforce.onrender.com",
     "localhost",
     "127.0.0.1",
+    "intellienforce.onrender.com",
+    "intellienforce-2.onrender.com",
 ]
+
+# Automatically allow the Render service hostname
+RENDER_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+
+if RENDER_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_HOSTNAME)
 
 CSRF_TRUSTED_ORIGINS = [
     "https://intellienforce.onrender.com",
+    "https://intellienforce-2.onrender.com",
 ]
 
-# Installed applications
+if RENDER_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(
+        f"https://{RENDER_HOSTNAME}"
+    )
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# --------------------------------------------------
+# INSTALLED APPLICATIONS
+# --------------------------------------------------
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -38,7 +59,10 @@ INSTALLED_APPS = [
     "enforcement",
 ]
 
-# Middleware
+# --------------------------------------------------
+# MIDDLEWARE
+# --------------------------------------------------
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -51,7 +75,10 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "trafficshield.urls"
 
-# Templates
+# --------------------------------------------------
+# TEMPLATES
+# --------------------------------------------------
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -70,7 +97,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "trafficshield.wsgi.application"
 
-# Database
+# --------------------------------------------------
+# DATABASE
+# SQLite - current configuration
+# --------------------------------------------------
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -78,7 +109,10 @@ DATABASES = {
     }
 }
 
-# Password validation
+# --------------------------------------------------
+# PASSWORD VALIDATION
+# --------------------------------------------------
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -94,7 +128,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
+# --------------------------------------------------
+# INTERNATIONALIZATION
+# --------------------------------------------------
+
 LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Asia/Kolkata"
@@ -102,9 +139,16 @@ TIME_ZONE = "Asia/Kolkata"
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# --------------------------------------------------
+# STATIC FILES
+# --------------------------------------------------
+
 STATIC_URL = "/static/"
+
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Default primary key
+# --------------------------------------------------
+# DEFAULT PRIMARY KEY
+# --------------------------------------------------
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
