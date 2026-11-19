@@ -1,0 +1,576 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TrafficShield — Smart Challan System</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="{% static 'enforcement/css/style.css' %}" rel="stylesheet">
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="badge">
+      <div class="badge-icon">🛡️</div>
+      <div class="badge-text">
+        <h1>TRAFFICSHIELD</h1>
+        <p>Law Enforcement Portal</p>
+      </div>
+    </div>
+    <div class="security-chips">
+      <span class="chip">256-BIT AES</span>
+      <span class="chip">2FA READY</span>
+      <span class="chip">JWT AUTH</span>
+      <span class="chip">RATE LIMITED</span>
+    </div>
+    <div class="field-group">
+      <label>Officer ID / Badge Number</label>
+      <input type="text" id="login-id" placeholder="TSF-XXXX-XXXX" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••••••">
+    </div>
+    <div class="field-group">
+      <label>OTP (2FA)</label>
+      <input type="text" id="login-otp" placeholder="6-digit code" maxlength="6">
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;font-family:'IBM Plex Mono',monospace;">Demo: use 123456</div>
+    </div>
+    <div id="login-error" class="error-msg">⚠ Invalid credentials or OTP. Please try again.</div>
+    <button class="btn-primary" onclick="doLogin()">AUTHENTICATE &amp; ACCESS</button>
+    <div style="margin-top:16px;font-size:11px;color:var(--text3);text-align:center;font-family:'IBM Plex Mono',monospace;">
+      Demo: ID=TSF-0001-DEMO | Pass=admin123 | OTP=123456
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <nav class="topnav">
+    <div class="nav-brand">⚡ TRAFFICSHIELD</div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" onclick="showPage('challan',this)">🎫 Challan</div>
+      <div class="nav-tab" onclick="showPage('dashboard',this)">📊 Dashboard</div>
+      <div class="nav-tab" onclick="showPage('anomaly',this)">🔍 Anomaly</div>
+      <div class="nav-tab" onclick="showPage('location',this)">📍 Location</div>
+    </div>
+    <div class="officer-info">
+      <div class="officer-avatar" id="officer-initials">KS</div>
+      <div class="officer-name" id="officer-name-nav">Kiran Sharma</div>
+      <button class="logout-btn" onclick="doLogout()">LOG OUT</button>
+    </div>
+  </nav>
+
+  <!-- CHALLAN PAGE -->
+  <div class="page active" id="page-challan">
+    <div class="page-header">
+      <h2>🎫 VEHICLE CHALLAN SYSTEM</h2>
+      <p>Enter vehicle registration number to search violations and generate challan</p>
+    </div>
+    <div class="vehicle-input-box">
+      <div class="vehicle-input-row">
+        <div class="vehicle-field">
+          <label>Vehicle Registration Number</label>
+          <input type="text" class="vehicle-input" id="vehicle-number" placeholder="KA 01 AB 1234" oninput="this.value=this.value.toUpperCase()" onkeypress="if(event.key==='Enter')searchVehicle()">
+        </div>
+        <button class="btn-search" onclick="searchVehicle()">🔍 SEARCH VEHICLE</button>
+      </div>
+    </div>
+
+    <div id="challan-results">
+      <div class="vehicle-info-bar" id="vehicle-info"></div>
+      
+      <div class="section-title">SELECT VIOLATIONS (IPC/MV ACT)</div>
+      <div class="challan-grid" id="challan-grid"></div>
+      
+      <div class="fine-summary-box">
+        <div class="fine-total">
+          <div class="fine-total-label">Total Fine Amount</div>
+          <div class="fine-total-amount" id="total-fine">₹ 0</div>
+        </div>
+        <div class="fine-actions">
+          <button class="btn-generate" onclick="generateChallan()">⚡ GENERATE CHALLAN</button>
+          <button class="btn-qr" onclick="showQR()">📱 QR + SEND TO CITIZEN</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div class="page" id="page-dashboard">
+    <div class="page-header">
+      <h2>📊 OFFICER DASHBOARD</h2>
+      <p><span class="live-dot"></span>Live statistics — Updated in real-time</p>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card c1">
+        <div class="stat-card-label">Total Fine Collected</div>
+        <div class="stat-card-value">₹4.7L</div>
+        <div class="stat-card-sub">↑ 12.4% from last month</div>
+      </div>
+      <div class="stat-card c2">
+        <div class="stat-card-label">Vehicles Tracked</div>
+        <div class="stat-card-value">1,284</div>
+        <div class="stat-card-sub">This month</div>
+      </div>
+      <div class="stat-card c3">
+        <div class="stat-card-label">Challans Issued</div>
+        <div class="stat-card-value">938</div>
+        <div class="stat-card-sub">↑ 8.1% from last month</div>
+      </div>
+      <div class="stat-card c4">
+        <div class="stat-card-label">Pending Payments</div>
+        <div class="stat-card-value">213</div>
+        <div class="stat-card-sub">₹1.2L outstanding</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-title">Officer Performance Leaderboard</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);overflow:hidden;">
+          <table class="data-table" id="officer-table"></table>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Violation Breakdown</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:20px;" id="violation-breakdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANOMALY PAGE -->
+  <div class="page" id="page-anomaly">
+    <div class="page-header">
+      <h2>🔍 ANONYMOUS ANOMALY DETECTION</h2>
+      <p>AI-powered pattern analysis to detect unusual collection behaviour</p>
+    </div>
+    <div class="anomaly-header">
+      <div class="anomaly-card">
+        <h3>Average Collection</h3>
+        <div class="value" style="color:var(--accent)">₹8,450</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Per officer / month</div>
+      </div>
+      <div class="anomaly-card">
+        <h3>Below Average (Low)</h3>
+        <div class="value" style="color:var(--accent3)">₹3,200</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Threshold &lt; 40% avg</div>
+      </div>
+      <div class="anomaly-card">
+        <h3>Anomalous (High)</h3>
+        <div class="value" style="color:var(--danger)">₹22,000+</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Threshold &gt; 250% avg</div>
+      </div>
+    </div>
+    <div class="section-title">Officer Anomaly Map (Anonymous IDs)</div>
+    <div class="anomaly-grid" id="anomaly-grid"></div>
+  </div>
+
+  <!-- LOCATION PAGE -->
+  <div class="page" id="page-location">
+    <div class="page-header">
+      <h2>📍 LOCATION INTELLIGENCE</h2>
+      <p>Traffic violation heatmap + AI recommendations for high-risk zones</p>
+    </div>
+    
+    <div class="map-placeholder" id="map-container">
+      <div class="map-grid"></div>
+      <div class="map-label" style="top:20px;left:20px;color:var(--accent);border-color:var(--accent)">📡 LIVE TRAFFIC OVERLAY</div>
+      <!-- Heat spots -->
+      <div class="heat-spot" style="width:120px;height:120px;background:radial-gradient(circle,rgba(255,59,92,0.6)0%,transparent 70%);top:25%;left:20%;"></div>
+      <div class="heat-spot" style="width:160px;height:160px;background:radial-gradient(circle,rgba(255,107,53,0.5)0%,transparent 70%);top:40%;left:55%;"></div>
+      <div class="heat-spot" style="width:80px;height:80px;background:radial-gradient(circle,rgba(255,204,0,0.5)0%,transparent 70%);top:60%;left:30%;"></div>
+      <div class="heat-spot" style="width:100px;height:100px;background:radial-gradient(circle,rgba(255,59,92,0.4)0%,transparent 70%);top:15%;left:65%;"></div>
+      <div class="heat-spot" style="width:60px;height:60px;background:radial-gradient(circle,rgba(0,212,255,0.3)0%,transparent 70%);top:70%;left:70%;"></div>
+      
+      <div class="map-label" style="top:28%;left:15%">🔴 MG Road</div>
+      <div class="map-label" style="top:43%;left:50%">🟠 Silk Board Junction</div>
+      <div class="map-label" style="top:63%;left:25%">🟡 Hebbal Flyover</div>
+      <div class="map-label" style="top:18%;left:60%">🔴 Marathahalli Bridge</div>
+      <div class="map-label" style="top:73%;left:65%">🔵 Whitefield</div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-title">High Violation Zones</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:20px;" id="violation-zones"></div>
+      </div>
+      <div>
+        <div class="section-title">Top Violation Types by Zone</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);padding:20px;" id="zone-violations"></div>
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:28px">🤖 AI RECOMMENDATIONS — Targeted Enforcement Strategies</div>
+    <div class="solution-grid" id="solution-grid"></div>
+  </div>
+</div>
+
+<!-- QR MODAL -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📱 PAYMENT QR + LINK</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace;margin-bottom:8px;">Challan #TS-2024-<span id="modal-challan-id"></span></div>
+      <div style="font-size:22px;color:var(--warn);font-family:'IBM Plex Mono',monospace;font-weight:700;" id="modal-fine-amount"></div>
+    </div>
+    <div class="qr-container">
+      <div class="qr-placeholder" id="qr-image"></div>
+    </div>
+    <div class="payment-link" id="payment-link-text"></div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px;font-family:'IBM Plex Mono',monospace;">
+      QR valid for 72 hours · Scan via any UPI app · Fine doubles after 30 days
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-sm-green" onclick="sendWhatsApp()">📲 SEND WHATSAPP</button>
+      <button class="btn-sm btn-sm-blue" onclick="sendSMS()">💬 SEND SMS</button>
+      <button class="btn-sm" style="background:rgba(255,107,53,0.1);border:1px solid var(--accent2);color:var(--accent2);" onclick="printChallan()">🖨️ PRINT</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// DATA
+const OFFICERS = [
+  {id:'TSF-0001-DEMO', pass:'admin123', name:'Kiran Sharma', station:'MG Road', badge:'KS'},
+  {id:'TSF-0002-TEST', pass:'test123', name:'Priya Nair', station:'Silk Board', badge:'PN'},
+];
+
+const CHALLANS = [
+  {id:'c1', icon:'🍺', name:'Drunk Driving', section:'S.185 MV Act', fine:10000, color:'#ff3b5c'},
+  {id:'c2', icon:'🪖', name:'No Helmet', section:'S.129 MV Act', fine:1000, color:'#ff6b35'},
+  {id:'c3', icon:'💺', name:'No Seat Belt', section:'S.194B MV Act', fine:1000, color:'#ff6b35'},
+  {id:'c4', icon:'📄', name:'No Insurance', section:'S.196 MV Act', fine:2000, color:'#ffcc00'},
+  {id:'c5', icon:'📱', name:'Mobile Use While Driving', section:'S.184 MV Act', fine:5000, color:'#ff3b5c'},
+  {id:'c6', icon:'🚦', name:'Signal Jump / Red Light', section:'S.177 MV Act', fine:500, color:'#ffcc00'},
+  {id:'c7', icon:'💨', name:'Overspeeding', section:'S.183 MV Act', fine:2000, color:'#ff6b35'},
+  {id:'c8', icon:'📋', name:'No RC / Registration', section:'S.192 MV Act', fine:5000, color:'#ff3b5c'},
+  {id:'c9', icon:'🔢', name:'No Number Plate', section:'S.177 MV Act', fine:500, color:'#ffcc00'},
+  {id:'c10', icon:'🔄', name:'Wrong Side Driving', section:'S.184 MV Act', fine:500, color:'#ff6b35'},
+  {id:'c11', icon:'📵', name:'No PUC Certificate', section:'S.190 MV Act', fine:10000, color:'#ff3b5c'},
+  {id:'c12', icon:'🚗', name:'Overloading', section:'S.194 MV Act', fine:2000, color:'#ffcc00'},
+];
+
+const VEHICLE_DB = {
+  'KA01AB1234': {owner:'Rajesh Kumar', type:'Car - Sedan', model:'Honda City 2021', insurance:'Valid till Dec 2025', rc:'Valid', phone:'+91 9876543210'},
+  'KA05CD5678': {owner:'Sunita Devi', type:'Two Wheeler', model:'Honda Activa 6G', insurance:'EXPIRED', rc:'Valid', phone:'+91 8765432109'},
+  'MH12EF9012': {owner:'Arun Mehta', type:'Car - SUV', model:'Toyota Fortuner 2022', insurance:'Valid till Mar 2026', rc:'Valid', phone:'+91 7654321098'},
+  'DL01GH3456': {owner:'Priyanka Singh', type:'Car - Hatchback', model:'Maruti Swift 2020', insurance:'Valid till Jul 2025', rc:'Valid', phone:'+91 6543210987'},
+};
+
+const OFFICER_PERF = [
+  {name:'Ravi Kumar', station:'MG Road', vehicles:284, fine:'₹1,24,000', pct:100},
+  {name:'Sunita Patil', station:'Silk Board', vehicles:241, fine:'₹98,500', pct:79},
+  {name:'Amar Joshi', station:'Marathahalli', vehicles:198, fine:'₹87,000', pct:70},
+  {name:'Deepa Menon', station:'Hebbal', vehicles:176, fine:'₹72,000', pct:58},
+  {name:'Vijay Nair', station:'Koramangala', vehicles:143, fine:'₹54,000', pct:44},
+];
+
+let currentOfficer = null;
+let selectedChallans = new Set();
+let currentVehicle = null;
+
+// AUTH
+function doLogin() {
+  const id = document.getElementById('login-id').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const otp = document.getElementById('login-otp').value;
+  const err = document.getElementById('login-error');
+  
+  if (otp !== '123456') { err.style.display='block'; err.textContent='⚠ Invalid OTP. Use 123456 for demo.'; return; }
+  
+  const officer = OFFICERS.find(o => o.id===id && o.pass===pass);
+  if (!officer) { err.style.display='block'; err.textContent='⚠ Invalid credentials. See demo info below.'; return; }
+  
+  currentOfficer = officer;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('officer-initials').textContent = officer.badge;
+  document.getElementById('officer-name-nav').textContent = officer.name;
+  
+  initDashboard();
+  initAnomaly();
+  initLocation();
+}
+
+function doLogout() {
+  currentOfficer = null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pass').value='';
+  document.getElementById('login-otp').value='';
+  document.getElementById('login-error').style.display='none';
+}
+
+function showPage(page, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  el.classList.add('active');
+}
+
+// CHALLAN
+function searchVehicle() {
+  const input = document.getElementById('vehicle-number').value.replace(/\s/g,'').toUpperCase();
+  if (!input || input.length < 6) { showToast('⚠ Enter valid vehicle number'); return; }
+  
+  const vehicle = VEHICLE_DB[input] || {
+    owner: 'Unknown Owner', type: 'Vehicle', model: 'Not in database', 
+    insurance: 'Unknown', rc: 'Unknown', phone: 'N/A'
+  };
+  currentVehicle = {...vehicle, number: input};
+  selectedChallans.clear();
+  
+  const infoEl = document.getElementById('vehicle-info');
+  const insStatus = vehicle.insurance.toLowerCase().includes('expired') ? 
+    '<span class="status-badge status-expired">INSURANCE EXPIRED</span>' :
+    vehicle.insurance === 'Unknown' ? '<span class="status-badge" style="border:1px solid var(--text3);color:var(--text3);">UNKNOWN</span>' :
+    '<span class="status-badge status-active">INSURANCE VALID</span>';
+  
+  infoEl.innerHTML = `
+    <div class="vi-item"><div class="vi-label">Vehicle No.</div><div class="vi-value" style="color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:20px;letter-spacing:3px;">${input}</div></div>
+    <div class="vi-divider"></div>
+    <div class="vi-item"><div class="vi-label">Owner</div><div class="vi-value">${vehicle.owner}</div></div>
+    <div class="vi-divider"></div>
+    <div class="vi-item"><div class="vi-label">Vehicle</div><div class="vi-value">${vehicle.model}</div></div>
+    <div class="vi-divider"></div>
+    <div class="vi-item"><div class="vi-label">Type</div><div class="vi-value">${vehicle.type}</div></div>
+    <div class="vi-divider"></div>
+    <div class="vi-item"><div class="vi-label">Status</div><div class="vi-value">${insStatus}</div></div>
+    <div class="vi-divider"></div>
+    <div class="vi-item"><div class="vi-label">Contact</div><div class="vi-value">${vehicle.phone}</div></div>
+  `;
+  
+  // Generate deterministic-but-different violations per vehicle number
+  // Use vehicle number chars to seed which violations are pre-detected
+  const seed = input.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const autoViolations = new Set();
+  
+  // Always auto-select expired insurance if applicable
+  if (vehicle.insurance.toLowerCase().includes('expired')) {
+    autoViolations.add('c4');
+  }
+  
+  // Pick 1-3 extra violations based on vehicle number seed (feels realistic)
+  const possibleAuto = ['c2','c3','c6','c7','c9','c10'];
+  const count = (seed % 3) + 1; // 1, 2, or 3 extra violations
+  for (let i = 0; i < count; i++) {
+    autoViolations.add(possibleAuto[(seed + i * 7) % possibleAuto.length]);
+  }
+  
+  // Render grid FIRST so DOM elements exist
+  const grid = document.getElementById('challan-grid');
+  grid.innerHTML = CHALLANS.map(c => `
+    <div class="challan-card" onclick="toggleChallan('${c.id}')" id="card-${c.id}">
+      <div class="check-indicator" id="check-${c.id}">✓</div>
+      <div class="challan-icon">${c.icon}</div>
+      <div class="challan-name">${c.name}</div>
+      <div class="challan-section">${c.section}</div>
+      <div class="challan-fine">₹${c.fine.toLocaleString()} <span>base fine</span></div>
+    </div>
+  `).join('');
+  
+  // Now DOM exists — apply auto-detected violations
+  autoViolations.forEach(id => {
+    selectedChallans.add(id);
+    const card = document.getElementById('card-' + id);
+    if (card) card.classList.add('selected');
+  });
+  
+  document.getElementById('challan-results').style.display='block';
+  updateTotal();
+}
+
+function toggleChallan(id) {
+  const card = document.getElementById('card-'+id);
+  if (!card) return;
+  if (selectedChallans.has(id)) {
+    selectedChallans.delete(id);
+    card.classList.remove('selected');
+  } else {
+    selectedChallans.add(id);
+    card.classList.add('selected');
+  }
+  updateTotal();
+}
+
+function updateTotal() {
+  let total = 0;
+  selectedChallans.forEach(id => {
+    const c = CHALLANS.find(x=>x.id===id);
+    if (c) total += c.fine;
+  });
+  document.getElementById('total-fine').textContent = '₹ ' + total.toLocaleString();
+}
+
+function getTotal() {
+  let total = 0;
+  selectedChallans.forEach(id => {
+    const c = CHALLANS.find(x=>x.id===id);
+    if (c) total += c.fine;
+  });
+  return total;
+}
+
+function generateChallan() {
+  if (selectedChallans.size === 0) { showToast('⚠ Select at least one violation'); return; }
+  showToast('✅ Challan #TS-2024-' + Math.floor(Math.random()*9000+1000) + ' generated successfully!');
+}
+
+function showQR() {
+  if (selectedChallans.size === 0) { showToast('⚠ Select at least one violation'); return; }
+  const total = getTotal();
+  const challanId = Math.floor(Math.random()*9000+1000);
+  document.getElementById('modal-challan-id').textContent = challanId;
+  document.getElementById('modal-fine-amount').textContent = '₹' + total.toLocaleString();
+  document.getElementById('payment-link-text').textContent = 'https://pay.trafficshield.gov.in/challan/TS-2024-' + challanId + '?amt=' + total + '&upi=trafficfine@sbi';
+  document.getElementById('qr-modal').classList.add('active');
+}
+
+function closeModal() { document.getElementById('qr-modal').classList.remove('active'); }
+function sendWhatsApp() { showToast('📲 WhatsApp sent to ' + (currentVehicle?.phone || 'citizen')); closeModal(); }
+function sendSMS() { showToast('💬 SMS sent to ' + (currentVehicle?.phone || 'citizen')); closeModal(); }
+function printChallan() { showToast('🖨️ Challan sent to printer'); closeModal(); }
+
+// DASHBOARD
+function initDashboard() {
+  const tbl = document.getElementById('officer-table');
+  tbl.innerHTML = `<thead><tr><th>#</th><th>Officer</th><th>Station</th><th>Vehicles</th><th>Fine Collected</th><th>Performance</th></tr></thead>
+  <tbody>${OFFICER_PERF.map((o,i)=>`
+    <tr>
+      <td><span class="rank-badge ${i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n'}">${i+1}</span></td>
+      <td><strong>${o.name}</strong></td>
+      <td style="color:var(--text2)">${o.station}</td>
+      <td style="font-family:'IBM Plex Mono',monospace">${o.vehicles}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--warn)">${o.fine}</td>
+      <td style="min-width:120px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:3px;font-family:'IBM Plex Mono',monospace">${o.pct}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${o.pct}%"></div></div>
+      </td>
+    </tr>
+  `).join('')}</tbody>`;
+
+  const vb = document.getElementById('violation-breakdown');
+  const vdata = [
+    {name:'Drunk Driving', count:187, color:'var(--danger)'},
+    {name:'No Helmet', count:312, color:'var(--accent2)'},
+    {name:'No Seat Belt', count:278, color:'var(--warn)'},
+    {name:'Overspeeding', count:143, color:'var(--accent)'},
+    {name:'No Insurance', count:95, color:'var(--accent3)'},
+    {name:'Signal Jump', count:67, color:'#a855f7'},
+  ];
+  const max = Math.max(...vdata.map(v=>v.count));
+  vb.innerHTML = vdata.map(v=>`
+    <div class="violation-bar">
+      <div class="vb-area">${v.name}</div>
+      <div class="vb-bar"><div class="vb-fill" style="width:${v.count/max*100}%;background:${v.color};height:100%"></div></div>
+      <div class="vb-count">${v.count}</div>
+    </div>
+  `).join('');
+}
+
+// ANOMALY
+function initAnomaly() {
+  const anomalyData = [
+    {id:'OFC-A7F3', amount:22400, avg:8450, label:'ANOMALOUS — HIGH', type:'high', reason:'3x above average. Possible zone bias or coercive practices.'},
+    {id:'OFC-B2D1', amount:11200, avg:8450, label:'ABOVE AVERAGE', type:'medium', reason:'Performing above average. Consistent pattern noted.'},
+    {id:'OFC-C9E4', amount:8900, avg:8450, label:'NORMAL RANGE', type:'medium', reason:'Within normal deviation range. No concern.'},
+    {id:'OFC-D3K8', amount:3100, avg:8450, label:'BELOW AVERAGE — LOW', type:'low', reason:'Less than 40% of average. Possible under-enforcement.'},
+    {id:'OFC-E6P2', amount:7200, avg:8450, label:'NORMAL RANGE', type:'medium', reason:'Slightly below average but within acceptable range.'},
+    {id:'OFC-F1Q7', amount:19800, avg:8450, label:'ANOMALOUS — HIGH', type:'high', reason:'2.3x above average. Requires review.'},
+  ];
+
+  const grid = document.getElementById('anomaly-grid');
+  grid.innerHTML = anomalyData.map(o => {
+    const pct = Math.min(100, (o.amount / 25000) * 100);
+    return `
+      <div class="anomaly-item">
+        <div class="anomaly-officer">
+          <div class="anomaly-avatar ${o.type}">${o.id.slice(-2)}</div>
+          <div>
+            <div style="font-weight:600;font-family:'IBM Plex Mono',monospace;font-size:13px;">${o.id}</div>
+            <div class="status-badge ${o.type==='high'?'status-expired':o.type==='low'?'':'status-active'}" style="margin-top:4px;font-size:10px;padding:2px 8px">${o.label}</div>
+          </div>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:24px;color:${o.type==='high'?'var(--danger)':o.type==='low'?'var(--accent)':'var(--warn)'};margin-bottom:12px;">₹${o.amount.toLocaleString()}</div>
+        <div class="anomaly-meter"><div class="anomaly-meter-fill ${o.type}-fill" style="width:${pct}%"></div></div>
+        <div class="anomaly-label"><span>₹0</span><span>₹25,000</span></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">${o.reason}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// LOCATION
+function initLocation() {
+  const zones = [
+    {area:'MG Road Junction', count:284, color:'var(--danger)', pct:100},
+    {area:'Silk Board Junction', count:241, color:'var(--accent2)', pct:85},
+    {area:'Marathahalli Bridge', count:198, color:'var(--accent2)', pct:70},
+    {area:'Hebbal Flyover', count:156, color:'var(--warn)', pct:55},
+    {area:'Whitefield IT Park', count:87, color:'var(--accent)', pct:31},
+  ];
+
+  const vz = document.getElementById('violation-zones');
+  vz.innerHTML = zones.map(z => `
+    <div class="violation-bar">
+      <div class="vb-area" style="font-size:13px">${z.area}</div>
+      <div class="vb-bar"><div class="vb-fill" style="width:${z.pct}%;background:${z.color};height:100%"></div></div>
+      <div class="vb-count">${z.count}</div>
+    </div>
+  `).join('');
+
+  const zv = document.getElementById('zone-violations');
+  const zvData = [
+    {zone:'MG Road', top:['Drunk Driving (34%)', 'No Seat Belt (28%)', 'Signal Jump (18%)']},
+    {zone:'Silk Board', top:['Overspeeding (41%)', 'No Insurance (22%)', 'Mobile Use (19%)']},
+    {zone:'Marathahalli', top:['No Helmet (38%)', 'No RC (24%)', 'Wrong Side (15%)']},
+  ];
+  zv.innerHTML = zvData.map(z => `
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:8px;font-family:'Rajdhani',sans-serif;font-size:15px;letter-spacing:1px">${z.zone}</div>
+      ${z.top.map(t=>`<div style="font-size:12px;color:var(--text2);padding:3px 0;padding-left:12px;position:relative"><span style="position:absolute;left:0;color:var(--accent2)">▸</span>${t}</div>`).join('')}
+    </div>
+  `).join('');
+
+  const solutions = [
+    {type:'sol-drink', icon:'🍺', title:'Drunk Driving (MG Road)', problem:'34% of violations at MG Road are drunk driving, especially Fri-Sat nights', actions:['Setup breath analyser checkpost 10PM-2AM','Coordinate with bar owners for designated driver programs','Install anti-DUI awareness LED boards','Night vision CCTV at all entry/exit points']},
+    {type:'sol-helmet', icon:'🪖', title:'No Helmet (Marathahalli)', problem:'38% two-wheeler violations lack helmet — IT crowd ignoring safety', actions:['Run "Helmet = Life" awareness campaign near IT parks','Partner with companies for helmet subsidy programs','Strict challan days on Monday morning rush','Install helmet-check enforcement posts']},
+    {type:'sol-insurance', icon:'📄', title:'No Insurance (Silk Board)', problem:'22% vehicles lack valid insurance — economic corridor hotspot', actions:['On-spot insurance renewal tie-up with ICICI/Bajaj','QR code to renew insurance instantly','Weekly insurance check drives','Send alerts to uninsured vehicles via Vahan DB']},
+    {type:'sol-accident', icon:'🚨', title:'Accident Prone Zones', problem:'Hebbal & Marathahalli show high accident correlation with rule violations', actions:['Speed governors / rumble strips installation','AI camera red-light detection deployment','Ambulance response time reduction plan','Emergency SOS call booth every 500m']},
+  ];
+
+  const sg = document.getElementById('solution-grid');
+  sg.innerHTML = solutions.map(s => `
+    <div class="solution-card ${s.type}">
+      <h4>${s.icon} ${s.title}</h4>
+      <p>${s.problem}</p>
+      <ul>${s.actions.map(a=>`<li>${a}</li>`).join('')}</ul>
+    </div>
+  `).join('');
+}
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('qr-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
